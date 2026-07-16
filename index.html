@@ -36,6 +36,19 @@
     select:focus, input:focus { outline: none; border-color: #4a90e2; }
     .range-sep { color: #aaa; font-weight: 700; }
 
+    /* ── Multi-range list (added chapter+paragraph combos) ── */
+    .range-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .range-chip {
+      display: inline-flex; align-items: center; gap: 6px; background: #eaf2fb;
+      color: #2c5da8; border: 1px solid #bcd6f2; border-radius: 999px;
+      padding: 5px 6px 5px 12px; font-size: 13px; font-weight: 600;
+    }
+    .range-chip button {
+      background: none; color: #2c5da8; border: none; padding: 0 4px;
+      font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer;
+    }
+    .range-chip button:hover { color: #e74c3c; opacity: 1; }
+
     /* ── Buttons ── */
     button { padding: 7px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
     button:hover { opacity: .85; }
@@ -162,6 +175,12 @@
       <span class="range-sep">~</span>
       <select id="paragraphToSelect" onchange="onParagraphRangeChange()"></select>
     </div>
+    <div class="row">
+      <button class="btn-outline" onclick="addRange()">+ 이 구간 추가</button>
+      <button class="btn-grey" onclick="clearRanges()">구간 초기화</button>
+      <span class="info-tag">여러 장·절 구간을 함께 출제하려면 위에서 범위를 고른 뒤 눌러서 추가하세요 (예: 7장 17~19절 + 8장 1~3절)</span>
+    </div>
+    <div class="row range-list" id="rangeList"></div>
 
     <div id="practiceControls">
       <div class="row">
@@ -777,6 +796,7 @@ let state = {
   paragraphFrom: 'all',
   paragraphTo:   'all',
   mode:          'word',
+  ranges:        [], // additional {chapterFrom,chapterTo,paragraphFrom,paragraphTo} combos merged into the verse pool
   quiz:          null,
   practiceOrder: 'sequential',
   practicePct:   0.25,
@@ -809,6 +829,7 @@ function init() {
   state.chapterTo = 'all';
 
   populateParagraphSelects();
+  renderRangeList();
   refreshPreview();
   updateDDay();
   updateDDaymini();
@@ -850,10 +871,14 @@ function parseRangeValue(v) {
 }
 
 function resolveChapterRange() {
+  return resolveChapterRangeFor(state.chapterFrom, state.chapterTo);
+}
+
+function resolveChapterRangeFor(chapterFrom, chapterTo) {
   const chapters = Object.keys(BIBLE_VERSES.revelation).map(Number).sort((a, b) => a - b);
   const min = chapters[0], max = chapters[chapters.length - 1];
-  let from = state.chapterFrom === 'all' ? min : state.chapterFrom;
-  let to   = state.chapterTo   === 'all' ? max : state.chapterTo;
+  let from = chapterFrom === 'all' ? min : chapterFrom;
+  let to   = chapterTo   === 'all' ? max : chapterTo;
   if (from > to) [from, to] = [to, from];
   return chapters.filter(c => c >= from && c <= to);
 }
@@ -905,26 +930,97 @@ function setMode(m) {
   document.getElementById('btnClause').classList.toggle('active', m === 'clause');
 }
 
-function buildRefLabel() {
-  const chapters = resolveChapterRange();
-  const chLabel = (state.chapterFrom === 'all' && state.chapterTo === 'all')
+/* Formats a single {chapterFrom,chapterTo,paragraphFrom,paragraphTo}
+   combo as "N장~M장 (X~Y절)", used both for the live selection and
+   for each entry added to state.ranges. */
+function formatRangeLabel(r) {
+  const chapters = resolveChapterRangeFor(r.chapterFrom, r.chapterTo);
+  const chLabel = (r.chapterFrom === 'all' && r.chapterTo === 'all')
     ? '전체'
     : `${chapters[0]}장~${chapters[chapters.length - 1]}장`;
-  const pLabel = (state.paragraphFrom === 'all' && state.paragraphTo === 'all')
+  const pLabel = (r.paragraphFrom === 'all' && r.paragraphTo === 'all')
     ? '전체'
-    : `${state.paragraphFrom === 'all' ? '전체' : state.paragraphFrom}~${state.paragraphTo === 'all' ? '전체' : state.paragraphTo}절`;
-  return `계시록 ${chLabel} (${pLabel})`;
+    : `${r.paragraphFrom === 'all' ? '전체' : r.paragraphFrom}~${r.paragraphTo === 'all' ? '전체' : r.paragraphTo}절`;
+  return `${chLabel} (${pLabel})`;
+}
+
+function currentRangeSelection() {
+  return {
+    chapterFrom:   state.chapterFrom,
+    chapterTo:     state.chapterTo,
+    paragraphFrom: state.paragraphFrom,
+    paragraphTo:   state.paragraphTo
+  };
+}
+
+function buildRefLabel() {
+  if (state.ranges.length > 0) {
+    return `계시록 ${state.ranges.map(formatRangeLabel).join(', ')}`;
+  }
+  return `계시록 ${formatRangeLabel(currentRangeSelection())}`;
 }
 
 /* Result-card range readout — always spelled out as 장/절 from~to,
    using '전체' when a side is unset, so the card alone documents
-   exactly which range a given exam was drawn from. */
+   exactly which range(s) a given exam was drawn from. */
 function buildRangeLabel() {
+  if (state.ranges.length > 0) {
+    return state.ranges.map((r, i) => `${i + 1}. ${formatRangeLabel(r)}`).join('\n');
+  }
   const chFrom = state.chapterFrom === 'all' ? '전체' : `${state.chapterFrom}장`;
   const chTo   = state.chapterTo   === 'all' ? '전체' : `${state.chapterTo}장`;
   const pFrom  = state.paragraphFrom === 'all' ? '전체' : `${state.paragraphFrom}절`;
   const pTo    = state.paragraphTo   === 'all' ? '전체' : `${state.paragraphTo}절`;
   return `장 : ${chFrom}~${chTo}\n절 : ${pFrom}~${pTo}`;
+}
+
+/* ── Multi-range selection: lets the user combine disjoint chapter
+   spans (e.g. 7:17~19 AND 8:1~3) into a single pool instead of being
+   limited to one contiguous chapter×paragraph range. ── */
+function addRange() {
+  const range = currentRangeSelection();
+  if (versesForRange(range).length === 0) return; // nothing to add, ignore
+  state.ranges.push(range);
+  renderRangeList();
+  refreshPreview();
+}
+
+function removeRange(i) {
+  state.ranges.splice(i, 1);
+  renderRangeList();
+  refreshPreview();
+}
+
+function clearRanges() {
+  state.ranges = [];
+  renderRangeList();
+  refreshPreview();
+}
+
+function renderRangeList() {
+  const el = document.getElementById('rangeList');
+  if (!el) return;
+  el.innerHTML = '';
+  if (state.ranges.length === 0) {
+    const info = document.createElement('span');
+    info.className = 'info-tag';
+    info.textContent = '추가된 구간이 없으면 위에서 선택한 장/절 범위 하나만 사용됩니다.';
+    el.appendChild(info);
+    return;
+  }
+  state.ranges.forEach((r, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'range-chip';
+    const label = document.createElement('span');
+    label.textContent = formatRangeLabel(r);
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '×';
+    removeBtn.onclick = () => removeRange(i);
+    chip.appendChild(label);
+    chip.appendChild(removeBtn);
+    el.appendChild(chip);
+  });
 }
 
 function refreshPreview() {
@@ -950,18 +1046,19 @@ function renderNumberedText(container, verses) {
   });
 }
 
-/* 선택된 장 범위 × 문단 범위에 해당하는 모든 절을 모아 반환.
-   문단 범위는 장마다 그 장의 실제 절 개수에 맞춰 클램프되므로,
-   여러 장에 걸친 범위라도 각 장에서 가능한 최대치를 사용한다. */
-function currentVerses() {
-  const chapters = resolveChapterRange();
+/* 하나의 {chapterFrom,chapterTo,paragraphFrom,paragraphTo} 구간에
+   해당하는 모든 절을 모아 반환. 문단 범위는 장마다 그 장의 실제
+   절 개수에 맞춰 클램프되므로, 여러 장에 걸친 범위라도 각 장에서
+   가능한 최대치를 사용한다. */
+function versesForRange(r) {
+  const chapters = resolveChapterRangeFor(r.chapterFrom, r.chapterTo);
   const verses = [];
   chapters.forEach(ch => {
     const chapterData = BIBLE_VERSES.revelation[ch];
     const vnums = Object.keys(chapterData).map(Number).sort((a, b) => a - b);
     const vmin = vnums[0], vmax = vnums[vnums.length - 1];
-    let pf = state.paragraphFrom === 'all' ? vmin : state.paragraphFrom;
-    let pt = state.paragraphTo   === 'all' ? vmax : state.paragraphTo;
+    let pf = r.paragraphFrom === 'all' ? vmin : r.paragraphFrom;
+    let pt = r.paragraphTo   === 'all' ? vmax : r.paragraphTo;
     if (pf > pt) [pf, pt] = [pt, pf];
     pf = Math.max(pf, vmin);
     pt = Math.min(pt, vmax);
@@ -970,6 +1067,21 @@ function currentVerses() {
     });
   });
   return verses;
+}
+
+/* 현재 선택된 절 목록. state.ranges에 추가된 구간이 하나 이상 있으면
+   그 구간들을 모두 합쳐(중복 제거) 사용하고, 없으면 화면에 보이는
+   장/문단 셀렉트의 단일 범위를 사용한다. 이렇게 하면 7:17~19와
+   8:1~3처럼 서로 떨어진 구간도 함께 출제/연습할 수 있다. */
+function currentVerses() {
+  if (state.ranges.length > 0) {
+    const byKey = new Map();
+    state.ranges.forEach(r => {
+      versesForRange(r).forEach(v => byKey.set(verseKey(v), v));
+    });
+    return Array.from(byKey.values()).sort((a, b) => a.chapter - b.chapter || a.num - b.num);
+  }
+  return versesForRange(currentRangeSelection());
 }
 
 function currentText() {
