@@ -123,6 +123,42 @@
 
     .hidden { display: none !important; }
 
+    /* ── Navigator (side drawer): jump list for practice/exam ── */
+    .nav-toggle-btn {
+      background: #fff; color: #4a90e2; border: 1.5px solid #4a90e2;
+      border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .navigator-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 200;
+    }
+    .navigator-backdrop.open { opacity: 1; pointer-events: auto; }
+    .navigator-panel {
+      position: fixed; top: 0; right: 0; height: 100%; width: min(78vw, 300px);
+      background: #fff; box-shadow: -4px 0 16px rgba(0,0,0,.18);
+      transform: translateX(100%); transition: transform .25s ease;
+      z-index: 201; display: flex; flex-direction: column;
+    }
+    .navigator-panel.open { transform: translateX(0); }
+    .navigator-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px; border-bottom: 1px solid #eee; flex-shrink: 0;
+    }
+    .navigator-header h3 { font-size: 14px; color: #2c3e50; }
+    .navigator-close {
+      background: none; border: none; font-size: 20px; line-height: 1; color: #888; cursor: pointer; padding: 0 4px;
+    }
+    .navigator-list { overflow-y: auto; flex: 1; padding: 6px 0; }
+    .navigator-item {
+      display: block; width: 100%; text-align: left; border: none; background: none;
+      padding: 10px 16px; font-size: 14px; color: #24292f; cursor: pointer;
+    }
+    .navigator-item:hover { background: #f5f8fc; }
+    .navigator-item.current { background: #eaf2fb; color: #2c5da8; font-weight: 700; }
+    .navigator-item.disabled { color: #ccc; cursor: default; }
+    .navigator-empty { padding: 16px; font-size: 13px; color: #aaa; }
+    .exam-item.flash { outline: 2px solid #4a90e2; outline-offset: 4px; border-radius: 4px; }
+
     /* ── Responsive layout ── */
     @media (max-width: 480px) {
       .container { padding: 16px 10px; }
@@ -232,7 +268,10 @@
 
   <!-- ── 빈칸 연습 (practice: one verse per screen, check anytime, retry freely) ── -->
   <div class="panel hidden" id="practicePanel">
-    <h3>빈칸 연습 <span id="practiceProgress" class="progress-tag"></span></h3>
+    <div class="exam-item-head">
+      <h3>빈칸 연습 <span id="practiceProgress" class="progress-tag"></span></h3>
+      <button class="nav-toggle-btn" onclick="openNavigator()">☰ 목차</button>
+    </div>
     <div class="quiz-text" id="practiceText"></div>
     <div class="row">
       <button class="btn-green"   onclick="checkPractice()">정답 확인</button>
@@ -247,7 +286,10 @@
 
   <!-- ── 시험 보기 (exam: a random sample of verses from the selected range, each with its own 1:30 timer) ── -->
   <div class="panel hidden" id="examPanel">
-    <h3>시험 보기</h3>
+    <div class="exam-item-head">
+      <h3>시험 보기</h3>
+      <button class="nav-toggle-btn" onclick="openNavigator()">☰ 목차</button>
+    </div>
     <div class="exam-global-timer" id="examGlobalTimer"></div>
     <div id="examList"></div>
     <div class="row" id="examSubmitRow">
@@ -268,6 +310,16 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── Navigator drawer: jump list shared by practice & exam ── -->
+<div class="navigator-backdrop" id="navigatorBackdrop" onclick="closeNavigator()"></div>
+<div class="navigator-panel" id="navigatorPanel">
+  <div class="navigator-header">
+    <h3>목차</h3>
+    <button class="navigator-close" onclick="closeNavigator()">×</button>
+  </div>
+  <div class="navigator-list" id="navigatorList"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -1109,10 +1161,73 @@ function backToSelection() {
   document.getElementById('previewPanel').classList.remove('hidden');
   document.getElementById('practicePanel').classList.add('hidden');
   document.getElementById('examPanel').classList.add('hidden');
+  closeNavigator();
   state.quiz = null;
   if (state.examTimerId) clearInterval(state.examTimerId);
   state.examTimerId = null;
   updateExamPoolInfo();
+}
+
+/* ================================================================
+   NAVIGATOR (side drawer): lists every 장:절 in the current
+   practice queue / exam draw so the user can jump straight to one
+   instead of stepping through sequentially. Built fresh each time
+   it's opened, since the underlying queue only changes between
+   panel visits, not while the drawer itself is open.
+   ================================================================ */
+function openNavigator() {
+  renderNavigator();
+  document.getElementById('navigatorPanel').classList.add('open');
+  document.getElementById('navigatorBackdrop').classList.add('open');
+}
+
+function closeNavigator() {
+  document.getElementById('navigatorPanel').classList.remove('open');
+  document.getElementById('navigatorBackdrop').classList.remove('open');
+}
+
+function renderNavigator() {
+  const listEl = document.getElementById('navigatorList');
+  listEl.innerHTML = '';
+
+  const verses = state.activePanel === 'practice' ? state.practiceQueue : state.examVerses;
+  if (!verses || verses.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'navigator-empty';
+    empty.textContent = '목차가 비어 있습니다.';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  verses.forEach((v, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'navigator-item';
+    btn.textContent = `${v.chapter}:${v.num}`;
+    if (state.activePanel === 'practice') {
+      if (i === state.practiceIndex) btn.classList.add('current');
+      btn.onclick = () => jumpToPracticeIndex(i);
+    } else {
+      btn.onclick = () => scrollToExamItem(verseKey(v));
+    }
+    listEl.appendChild(btn);
+  });
+}
+
+function jumpToPracticeIndex(i) {
+  state.practiceIndex = i;
+  renderPracticeItem();
+  closeNavigator();
+}
+
+function scrollToExamItem(key) {
+  const ta = document.getElementById(`examTA-${key}`);
+  if (!ta) return;
+  const item = ta.closest('.exam-item');
+  closeNavigator();
+  item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  item.classList.add('flash');
+  setTimeout(() => item.classList.remove('flash'), 1200);
+  ta.focus();
 }
 
 /* ================================================================
