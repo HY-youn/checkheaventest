@@ -196,6 +196,18 @@
     <button id="tabExam"     class="tab"        onclick="switchPanel('exam')">시험 보기</button>
   </div>
 
+  <!-- ── 천국고시핵심성구: one-click load of the confirmed core-verse exam range ── -->
+  <div class="panel" id="coreVersePanel">
+    <h3>🔥 천국고시핵심성구</h3>
+    <div class="row">
+      <button class="btn-orange" onclick="selectCoreVerses()">확정 범위 자동 선택 (21구간)</button>
+      <button class="btn-grey" onclick="clearRanges()">선택 해제</button>
+    </div>
+    <div class="row">
+      <span class="info-tag">계 7:3~4, 7:9, 7:14~15, 8:1~2, 8:11, 9:1, 9:3, 9:14~16, 10:1~2, 10:7, 10:10~11, 11:1, 11:2, 11:8, 11:15, 12:5, 12:9, 12:10~11, 13:1~2, 13:6, 13:17~18</span>
+    </div>
+  </div>
+
   <!-- ── Selection (shared by both tabs) ── -->
   <div class="panel" id="selectionPanel">
     <h3>본문 선택</h3>
@@ -1024,6 +1036,29 @@ function buildRangeLabel() {
   const pFrom  = state.paragraphFrom === 'all' ? '전체' : `${state.paragraphFrom}절`;
   const pTo    = state.paragraphTo   === 'all' ? '전체' : `${state.paragraphTo}절`;
   return `장 : ${chFrom}~${chTo}\n절 : ${pFrom}~${pTo}`;
+}
+
+/* ── 천국고시핵심성구: confirmed core-verse exam range (계 7~13장),
+   entered as [chapter, verseFrom, verseTo] triples so it can be
+   expanded into the same {chapterFrom,chapterTo,paragraphFrom,paragraphTo}
+   shape used by state.ranges — this loads exactly like 21 manual
+   addRange() presses. ── */
+const CORE_VERSE_RANGES = [
+  [7, 3, 4], [7, 9, 9], [7, 14, 15],
+  [8, 1, 2], [8, 11, 11],
+  [9, 1, 1], [9, 3, 3], [9, 14, 16],
+  [10, 1, 2], [10, 7, 7], [10, 10, 11],
+  [11, 1, 1], [11, 2, 2], [11, 8, 8], [11, 15, 15],
+  [12, 5, 5], [12, 9, 9], [12, 10, 11],
+  [13, 1, 2], [13, 6, 6], [13, 17, 18],
+];
+
+function selectCoreVerses() {
+  state.ranges = CORE_VERSE_RANGES.map(([ch, from, to]) => ({
+    chapterFrom: ch, chapterTo: ch, paragraphFrom: from, paragraphTo: to
+  }));
+  renderRangeList();
+  refreshPreview();
 }
 
 /* ── Multi-range selection: lets the user combine disjoint chapter
