@@ -180,10 +180,14 @@
         <span id="examPoolInfo" class="info-tag"></span>
       </div>
       <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">빈칸 채우기 문제</h3>
-      <div class="flex gap-3.5 mb-1">
-        <label class="flex items-center gap-1 font-medium text-[13px] sm:text-sm text-slate-700"><input type="radio" name="examBlankToggle" value="on" checked onchange="setExamBlankEnabled(true)"> 사용</label>
-        <label class="flex items-center gap-1 font-medium text-[13px] sm:text-sm text-slate-700"><input type="radio" name="examBlankToggle" value="off" onchange="setExamBlankEnabled(false)"> 사용 안 함</label>
-      </div>
+      <label class="inline-flex items-center gap-3 mb-1 cursor-pointer select-none">
+        <span class="relative inline-block w-11 h-6 shrink-0">
+          <input type="checkbox" id="examBlankToggle" class="peer sr-only" onchange="setExamBlankEnabled(this.checked)">
+          <span class="absolute inset-0 rounded-full bg-slate-200 peer-checked:bg-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-600 peer-focus-visible:ring-offset-2 transition-colors"></span>
+          <span class="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5"></span>
+        </span>
+        <span class="text-[13px] sm:text-sm font-medium text-slate-700">사용</span>
+      </label>
       <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">시험 시작</h3>
       <div class="flex items-center flex-wrap gap-2.5">
         <button class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="startExam()">시험 시작 (절당 1분 30초)</button>
@@ -792,7 +796,7 @@ let state = {
   examItems:     [],
   examTimerId:   null,
   examDate:      null,
-  examBlankEnabled: true
+  examBlankEnabled: false
 };
 
 /* ================================================================
