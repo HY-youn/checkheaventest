@@ -5,203 +5,88 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>계시록 빈칸 암기 테스트</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; overflow-x: hidden; }
-    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background: #f0f4f8; min-height: 100vh; }
-    .container { width: 100%; max-width: 820px; margin: 0 auto; padding: 24px 16px; }
-    /* ── Header (title > description > D-day badge > mock-exam tag) ── */
-    .app-header { text-align: center; margin-bottom: 24px; }
-    .app-title {
-      font-size: 32px; font-weight: 800; color: #2c3e50; letter-spacing: -0.01em;
-      line-height: 1.2; margin-bottom: 6px; text-wrap: balance;
-    }
-    .app-description { font-size: 16px; font-weight: 600; color: #1f5aa8; margin-bottom: 16px; }
-    .dday-badge {
-      display: inline-flex; align-items: center; gap: 4px; background: #eaf2fb; color: #2c3e50;
-      font-weight: 700; font-size: 15px; padding: 7px 18px; border-radius: 999px;
-    }
-    .mock-exam-row {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      margin-top: 12px; font-size: 13px; color: #555; font-weight: 600;
-    }
-    .dday-badge--mini { background: #f0f2f5; color: #555; font-size: 12px; font-weight: 700; padding: 4px 12px; }
+    /* Notion.so-style theme. Tailwind utility classes handle the static chrome
+       directly in the markup below; the rules kept here are only for elements
+       the app builds/toggles at runtime via className/classList, where Tailwind
+       classes can't be attached from JS without touching the app logic. */
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
 
-    /* ── Tabs ── */
-    .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
-    .tab {
-      flex: 1; padding: 10px; border: 1.5px solid #4a90e2; border-radius: 8px;
-      background: #fff; color: #4a90e2; font-weight: 700; font-size: 15px; cursor: pointer;
+    button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
+      outline: 2px solid #2563eb; outline-offset: 2px;
     }
-    .tab.active { background: #4a90e2; color: #fff; }
+    button:active:not(:disabled) { transform: translateY(1px); }
 
-    /* ── Controls panel ── */
-    .panel { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-    .panel h3 { font-size: 13px; color: #555; font-weight: 700; margin-bottom: 14px; }
-    .row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-    .row:last-child { margin-bottom: 0; }
-    label { font-size: 14px; font-weight: 600; min-width: 72px; color: #555; }
-    select, input[type="number"] {
-      padding: 7px 11px; border: 1.5px solid #d0d7de; border-radius: 6px;
-      font-size: 14px; background: #fafbfc; color: #24292f;
-    }
-    select:focus, input[type="number"]:focus { border-color: #4a90e2; box-shadow: 0 0 0 3px rgba(74,144,226,.2); outline: none; }
-    .range-sep { color: #666; font-weight: 700; }
+    /* ── Tab / mode-group selected state ── */
+    .tab.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .mode-group button.active { background: #0f172a; color: #fff; border-color: #0f172a; }
 
-    /* ── Multi-range list (added chapter+paragraph combos) ── */
-    .range-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    /* ── Range chips (added chapter·paragraph combos, built by JS) ── */
     .range-chip {
-      display: inline-flex; align-items: center; gap: 6px; background: #eaf2fb;
-      color: #2c5da8; border: 1px solid #bcd6f2; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 6px; background: #eff6ff;
+      color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 999px;
       padding: 5px 6px 5px 12px; font-size: 13px; font-weight: 600;
     }
     .range-chip button {
-      background: none; color: #2c5da8; border: none; padding: 0 4px;
+      background: none; color: #1d4ed8; border: none; padding: 0 4px;
       font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer;
     }
-    .range-chip button:hover { color: #e74c3c; opacity: 1; }
+    .range-chip button:hover { color: #dc2626; }
 
-    /* ── Buttons ── */
-    button { padding: 7px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
-    button:hover { opacity: .85; }
-    .btn-blue   { background: #4a90e2; color: #fff; }
-    .btn-green  { background: #27ae60; color: #fff; }
-    .btn-orange { background: #e67e22; color: #fff; }
-    .btn-grey   { background: #95a5a6; color: #fff; }
-    .btn-outline { background: #fff; color: #4a90e2; border: 1.5px solid #4a90e2; }
-    .mode-group { display: flex; gap: 0; }
-    .mode-group button { border-radius: 0; border: 1.5px solid #4a90e2; background: #fff; color: #4a90e2; }
-    .mode-group button:first-child { border-radius: 6px 0 0 6px; }
-    .mode-group button:last-child  { border-radius: 0 6px 6px 0; border-left: none; }
-    .mode-group button.active { background: #4a90e2; color: #fff; }
-
-    /* ── Verse display ── */
-    .verse-ref { font-size: 12px; color: #666; margin-bottom: 8px; }
-    .verse-text { font-size: 16px; line-height: 1.9; color: #24292f; white-space: pre-line; }
-    .verse-num { font-weight: 700; color: #4a90e2; }
-    .radio-group { display: flex; gap: 14px; margin-bottom: 10px; }
-    .radio-group label { display: flex; align-items: center; gap: 4px; font-weight: 500; min-width: 0; }
-
-    /* ── Quiz text (blanks rendered inline as inputs) ── */
-    .quiz-text { font-size: 16px; line-height: 2.4; color: #24292f; margin-bottom: 20px; word-break: keep-all; white-space: pre-line; }
+    /* ── Verse / quiz content (rendered by JS) ── */
+    .verse-num { font-weight: 700; color: #2563eb; }
+    .quiz-text { font-size: 16px; line-height: 2.4; color: #0f172a; margin-bottom: 20px; word-break: keep-all; white-space: pre-line; }
     .inline-input {
-      display: inline-block; border: none; border-bottom: 2px solid #4a90e2;
-      background: #eaf2fb; padding: 1px 4px; margin: 0 1px; font-size: 16px;
+      display: inline-block; border: none; border-bottom: 2px solid #2563eb;
+      background: #eff6ff; padding: 1px 4px; margin: 0 1px; font-size: 16px;
       text-align: left; border-radius: 2px; font-family: inherit;
       max-width: 100%; box-sizing: border-box; vertical-align: bottom;
       white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
       resize: none; overflow: hidden; line-height: 1.4;
     }
-    .inline-input:focus { outline: 2px solid #4a90e2; outline-offset: 0; background: #d7e8fb; }
-    .inline-input.correct { border-color: #27ae60; background: #f0fff4; color: #27ae60; }
-    .inline-input.wrong   { border-color: #e74c3c; background: #fff5f5; color: #e74c3c; }
-    .wrong-hint { font-size: 12px; color: #e74c3c; font-weight: 700; margin: 0 2px; }
+    .inline-input:focus { outline: 2px solid #2563eb; outline-offset: 0; background: #dbeafe; }
+    .inline-input.correct { border-color: #059669; background: #ecfdf5; color: #059669; }
+    .inline-input.wrong   { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+    .wrong-hint { font-size: 12px; color: #dc2626; font-weight: 700; margin: 0 2px; }
+    .info-tag { font-weight: 400; color: #64748b; font-size: 12px; }
+    .progress-tag { font-weight: 400; color: #94a3b8; font-size: 13px; }
 
-    .progress-tag { font-weight: 400; color: #666; font-size: 13px; }
-    .info-tag { font-weight: 400; color: #666; font-size: 12px; }
-
-    /* ── Exam: one item (textarea) per verse, single page-wide timer ── */
+    /* ── Exam items (rendered by JS, one per verse) ── */
     .exam-global-timer {
-      text-align: center; font-size: 18px; font-weight: 700; color: #24292f;
+      text-align: center; font-size: 18px; font-weight: 700; color: #0f172a;
       font-variant-numeric: tabular-nums; margin-bottom: 18px;
     }
-    .exam-global-timer.expired { color: #e74c3c; }
-    .exam-item { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #eee; }
+    .exam-global-timer.expired { color: #dc2626; }
+    .exam-item { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0; }
     .exam-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .exam-item.flash { outline: 2px solid #2563eb; outline-offset: 4px; border-radius: 4px; }
     .exam-item-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .exam-type-tag { font-size: 11px; font-weight: 700; color: #1f5aa8; background: #eaf2fb; padding: 2px 9px; border-radius: 999px; }
+    .exam-type-tag { font-size: 11px; font-weight: 700; color: #1d4ed8; background: #eff6ff; padding: 2px 9px; border-radius: 999px; }
     .exam-textarea {
-      width: 100%; min-height: 90px; padding: 12px; border: 1.5px solid #d0d7de;
+      width: 100%; min-height: 90px; padding: 12px; border: 1px solid #cbd5e1;
       border-radius: 8px; font-size: 16px; line-height: 1.8; font-family: inherit;
-      resize: vertical; margin-bottom: 10px;
+      resize: vertical; margin-bottom: 10px; color: #0f172a;
     }
-    .exam-textarea:focus { outline: none; border-color: #4a90e2; }
-    .exam-textarea[readonly] { background: #f8f9fa; color: #888; }
-    .diff-correct { color: #24292f; }
-    .diff-wrong   { color: #e74c3c; font-weight: 700; text-decoration: underline wavy; }
-    .diff-note    { font-size: 11px; color: #e74c3c; opacity: .8; margin-right: 2px; }
+    .exam-textarea:focus { outline: none; border-color: #2563eb; }
+    .exam-textarea[readonly] { background: #f8fafc; color: #94a3b8; }
+    .diff-correct { color: #0f172a; }
+    .diff-wrong   { color: #dc2626; font-weight: 700; text-decoration: underline wavy; }
+    .diff-note    { font-size: 11px; color: #dc2626; opacity: .8; margin-right: 2px; }
 
-    /* ── Result card (dedicated 9:16 shareable card, screenshot target) ── */
-    .result-card {
-      aspect-ratio: 9 / 16; width: min(100%, 300px); margin: 0 auto;
-      background: linear-gradient(160deg, #4a90e2, #2c3e50); border-radius: 20px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 10px; color: #fff; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
-    }
-    .result-card-label { font-size: 13px; opacity: .9; }
-    .result-card-score { font-size: 42px; font-weight: 800; }
-    .result-card-pct   { font-size: 20px; opacity: .9; }
-    .result-card-range { font-size: 13px; opacity: .85; text-align: center; line-height: 1.6; white-space: pre-line; margin-top: 10px; }
-    .result-card-date  { font-size: 13px; opacity: .85; margin-top: 12px; }
-
-    .hidden { display: none !important; }
-
-    /* ── Navigator (side drawer): jump list for practice/exam ── */
-    .nav-toggle-btn {
-      background: #fff; color: #4a90e2; border: 1.5px solid #4a90e2;
-      border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
-    }
-    .navigator-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.35);
-      opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 200;
-    }
+    /* ── Navigator drawer (open state toggled by JS) ── */
+    .navigator-backdrop { transition: opacity .2s ease; }
     .navigator-backdrop.open { opacity: 1; pointer-events: auto; }
-    .navigator-panel {
-      position: fixed; top: 0; right: 0; height: 100%; width: min(78vw, 300px);
-      background: #fff; box-shadow: -4px 0 16px rgba(0,0,0,.18);
-      transform: translateX(100%); transition: transform .25s ease;
-      z-index: 201; display: flex; flex-direction: column;
-    }
+    .navigator-panel { transition: transform .25s ease; }
     .navigator-panel.open { transform: translateX(0); }
-    .navigator-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 14px 16px; border-bottom: 1px solid #eee; flex-shrink: 0;
-    }
-    .navigator-header h3 { font-size: 14px; color: #2c3e50; }
-    .navigator-close {
-      background: none; border: none; font-size: 20px; line-height: 1; color: #888; cursor: pointer; padding: 0 4px;
-    }
-    .navigator-list { overflow-y: auto; flex: 1; padding: 6px 0; }
     .navigator-item {
       display: block; width: 100%; text-align: left; border: none; background: none;
-      padding: 10px 16px; font-size: 14px; color: #24292f; cursor: pointer;
+      padding: 10px 16px; font-size: 14px; color: #0f172a; cursor: pointer;
     }
-    .navigator-item:hover { background: #f5f8fc; }
-    .navigator-item.current { background: #eaf2fb; color: #2c5da8; font-weight: 700; }
-    .navigator-item.disabled { color: #ccc; cursor: default; }
-    .navigator-empty { padding: 16px; font-size: 13px; color: #aaa; }
-    .exam-item.flash { outline: 2px solid #4a90e2; outline-offset: 4px; border-radius: 4px; }
-
-    /* ── Responsive layout ── */
-    @media (max-width: 480px) {
-      .container { padding: 16px 10px; }
-      .app-title { font-size: 24px; }
-      .app-description { font-size: 14px; }
-      .app-header { margin-bottom: 18px; }
-      .panel { padding: 14px; }
-      label { min-width: 52px; font-size: 13px; }
-      select, input[type="number"] { font-size: 13px; padding: 6px 8px; }
-      button { font-size: 13px; padding: 6px 12px; }
-      .tab { font-size: 13px; padding: 8px; }
-      .quiz-text, .verse-text, .exam-textarea { font-size: 15px; }
-      .exam-global-timer { font-size: 15px; }
-    }
-
-    @media (orientation: landscape) and (max-height: 480px) {
-      .container { padding: 12px 20px; }
-      .app-title { font-size: 20px; margin-bottom: 4px; }
-      .app-description { font-size: 13px; margin-bottom: 8px; }
-      .app-header { margin-bottom: 12px; }
-      .panel { padding: 12px; margin-bottom: 12px; }
-      .row { margin-bottom: 8px; }
-      .exam-textarea { min-height: 56px; }
-      .result-card { width: min(60vh, 260px); }
-    }
-
-    /* ── Focus & interaction states ── */
-    button:focus-visible { outline: 2px solid #4a90e2; outline-offset: 2px; }
-    .tab:focus-visible   { outline: 2px solid #4a90e2; outline-offset: -2px; }
-    button:active:not(:disabled) { transform: translateY(1px); }
+    .navigator-item:hover { background: #f8fafc; }
+    .navigator-item.current { background: #eff6ff; color: #1d4ed8; font-weight: 700; }
+    .navigator-item.disabled { color: #cbd5e1; cursor: default; }
+    .navigator-empty { padding: 16px; font-size: 13px; color: #94a3b8; }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -211,160 +96,165 @@
     }
   </style>
 </head>
-<body>
-<div class="container">
-  <header class="app-header">
-    <h1 class="app-title">🔥 천국고시 🔥</h1>
-    <p class="app-description">계시록 빈칸 암기 테스트</p>
-    <div class="dday-badge" id="ddayHeader"></div>
-    <div class="mock-exam-row">
+<body class="w-full overflow-x-hidden bg-white text-slate-900 min-h-screen">
+<div class="w-full max-w-[820px] mx-auto px-[10px] py-4 sm:px-4 sm:py-6">
+  <header class="text-center mb-5 sm:mb-6">
+    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mb-1.5">🔥 천국고시 🔥</h1>
+    <p class="text-sm sm:text-base font-semibold text-blue-600 mb-4">계시록 빈칸 암기 테스트</p>
+    <div class="inline-flex items-center gap-1 bg-blue-50 text-slate-900 font-bold text-[15px] px-[18px] py-[7px] rounded-full" id="ddayHeader"></div>
+    <div class="flex items-center justify-center gap-2 mt-3 text-[13px] text-slate-500 font-semibold">
       <span>✏️ 모의고사</span>
-      <span class="dday-badge dday-badge--mini" id="ddayHeader1"></span>
+      <span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full" id="ddayHeader1"></span>
     </div>
   </header>
 
   <!-- ── Tabs ── -->
-  <div class="tabs">
-    <button id="tabPractice" class="tab active" onclick="switchPanel('practice')">빈칸 연습</button>
-    <button id="tabExam"     class="tab"        onclick="switchPanel('exam')">시험 보기</button>
+  <div class="flex gap-2 mb-[18px]">
+    <button id="tabPractice" class="tab active flex-1 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold text-[15px] cursor-pointer" onclick="switchPanel('practice')">빈칸 연습</button>
+    <button id="tabExam"     class="tab flex-1 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold text-[15px] cursor-pointer" onclick="switchPanel('exam')">시험 보기</button>
   </div>
 
   <!-- ── 천국고시핵심성구: one-click load of the confirmed core-verse exam range ── -->
-  <div class="panel" id="coreVersePanel">
-    <h3>🔥 천국고시핵심성구</h3>
-    <div class="row">
-      <button class="btn-orange" onclick="selectCoreVerses()">확정 범위 자동 선택 (21구간)</button>
-      <button class="btn-grey" onclick="clearRanges()">선택 해제</button>
+  <div class="bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="coreVersePanel">
+    <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mb-3.5">🔥 천국고시핵심성구</h3>
+    <div class="flex items-center flex-wrap gap-2.5 mb-3">
+      <button class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="selectCoreVerses()">확정 범위 자동 선택 (21구간)</button>
+      <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="clearRanges()">선택 해제</button>
     </div>
-    <div class="row">
+    <div class="flex items-center flex-wrap gap-2.5">
       <span class="info-tag">계 7:3~4, 7:9, 7:14~15, 8:1~2, 8:11, 9:1, 9:3, 9:14~16, 10:1~2, 10:7, 10:10~11, 11:1, 11:2, 11:8, 11:15, 12:5, 12:9, 12:10~11, 13:1~2, 13:6, 13:17~18</span>
     </div>
   </div>
 
   <!-- ── Selection (shared by both tabs) ── -->
-  <div class="panel" id="selectionPanel">
-    <h3>본문 선택</h3>
-    <div class="row">
-      <label>장</label>
-      <select id="chapterFromSelect" onchange="onChapterRangeChange()"></select>
-      <span class="range-sep">~</span>
-      <select id="chapterToSelect" onchange="onChapterRangeChange()"></select>
+  <div class="bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="selectionPanel">
+    <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mb-3.5">본문 선택</h3>
+    <div class="flex items-center flex-wrap gap-2.5 mb-3">
+      <label class="text-[13px] sm:text-sm font-semibold text-slate-500 min-w-[52px] sm:min-w-[72px]">장</label>
+      <select id="chapterFromSelect" class="px-[11px] py-[7px] border border-slate-300 rounded-md text-[13px] sm:text-sm bg-slate-50 text-slate-900" onchange="onChapterRangeChange()"></select>
+      <span class="text-slate-400 font-bold">~</span>
+      <select id="chapterToSelect" class="px-[11px] py-[7px] border border-slate-300 rounded-md text-[13px] sm:text-sm bg-slate-50 text-slate-900" onchange="onChapterRangeChange()"></select>
     </div>
-    <div class="row">
-      <label>문단</label>
-      <select id="paragraphFromSelect" onchange="onParagraphRangeChange()"></select>
-      <span class="range-sep">~</span>
-      <select id="paragraphToSelect" onchange="onParagraphRangeChange()"></select>
+    <div class="flex items-center flex-wrap gap-2.5 mb-3">
+      <label class="text-[13px] sm:text-sm font-semibold text-slate-500 min-w-[52px] sm:min-w-[72px]">문단</label>
+      <select id="paragraphFromSelect" class="px-[11px] py-[7px] border border-slate-300 rounded-md text-[13px] sm:text-sm bg-slate-50 text-slate-900" onchange="onParagraphRangeChange()"></select>
+      <span class="text-slate-400 font-bold">~</span>
+      <select id="paragraphToSelect" class="px-[11px] py-[7px] border border-slate-300 rounded-md text-[13px] sm:text-sm bg-slate-50 text-slate-900" onchange="onParagraphRangeChange()"></select>
     </div>
-    <div class="row">
-      <button class="btn-outline" onclick="addRange()">+ 이 구간 추가</button>
-      <button class="btn-grey" onclick="clearRanges()">구간 초기화</button>
+    <div class="flex items-center flex-wrap gap-2.5 mb-3">
+      <button class="bg-white hover:bg-slate-50 text-blue-600 border border-blue-600 px-4 py-[6px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="addRange()">+ 이 구간 추가</button>
+      <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="clearRanges()">구간 초기화</button>
       <span class="info-tag">여러 장·절 구간을 함께 출제하려면 위에서 범위를 고른 뒤 눌러서 추가하세요 (예: 7장 17~19절 + 8장 1~3절)</span>
     </div>
-    <div class="row range-list" id="rangeList"></div>
+    <div class="flex flex-wrap gap-2 mt-1" id="rangeList"></div>
 
     <div id="practiceControls">
-      <div class="row">
-        <label>단위</label>
-        <div class="mode-group">
-          <button id="btnWord"   class="active" onclick="setMode('word')">단어</button>
-          <button id="btnClause"             onclick="setMode('clause')">구절 (쉼표)</button>
+      <div class="flex items-center flex-wrap gap-2.5 mt-3.5">
+        <label class="text-[13px] sm:text-sm font-semibold text-slate-500 min-w-[52px] sm:min-w-[72px]">단위</label>
+        <div class="mode-group flex">
+          <button id="btnWord"   class="active px-4 py-2 border border-slate-300 text-slate-700 bg-white text-[13px] sm:text-sm font-semibold rounded-l-md" onclick="setMode('word')">단어</button>
+          <button id="btnClause" class="px-4 py-2 border border-l-0 border-slate-300 text-slate-700 bg-white text-[13px] sm:text-sm font-semibold rounded-r-md" onclick="setMode('clause')">구절 (쉼표)</button>
         </div>
       </div>
-      <h3 style="margin-top:14px;">출력 순서</h3>
-      <div class="row">
-        <div class="mode-group">
-          <button id="btnSequential" class="active" onclick="setPracticeOrder('sequential')">순차 출력</button>
-          <button id="btnRandom"                onclick="setPracticeOrder('random')">랜덤 출력</button>
+      <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">출력 순서</h3>
+      <div class="flex items-center flex-wrap gap-2.5">
+        <div class="mode-group flex">
+          <button id="btnSequential" class="active px-4 py-2 border border-slate-300 text-slate-700 bg-white text-[13px] sm:text-sm font-semibold rounded-l-md" onclick="setPracticeOrder('sequential')">순차 출력</button>
+          <button id="btnRandom" class="px-4 py-2 border border-l-0 border-slate-300 text-slate-700 bg-white text-[13px] sm:text-sm font-semibold rounded-r-md" onclick="setPracticeOrder('random')">랜덤 출력</button>
         </div>
       </div>
-      <h3 style="margin-top:14px;">연습 난이도</h3>
-      <div class="row">
-        <button class="btn-blue" onclick="startPractice(0.25)">25%</button>
-        <button class="btn-blue" onclick="startPractice(0.5)">50%</button>
-        <button class="btn-blue" onclick="startPractice(0.75)">75%</button>
-        <button class="btn-orange" onclick="startPractice(1.0)">전체</button>
+      <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">연습 난이도</h3>
+      <div class="flex items-center flex-wrap gap-2.5">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="startPractice(0.25)">25%</button>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="startPractice(0.5)">50%</button>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="startPractice(0.75)">75%</button>
+        <button class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="startPractice(1.0)">전체</button>
       </div>
     </div>
 
     <div id="examControls" class="hidden">
-      <h3 style="margin-top:14px;">시험 설정</h3>
-      <div class="row">
-        <label>문제 수</label>
-        <input type="number" id="examCountInput" min="1" value="10" style="width:70px;" oninput="updateExamPoolInfo()">
+      <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">시험 설정</h3>
+      <div class="flex items-center flex-wrap gap-2.5">
+        <label class="text-[13px] sm:text-sm font-semibold text-slate-500 min-w-[52px] sm:min-w-[72px]">문제 수</label>
+        <input type="number" id="examCountInput" min="1" value="10" class="w-[70px] px-[11px] py-[7px] border border-slate-300 rounded-md text-[13px] sm:text-sm bg-slate-50 text-slate-900" oninput="updateExamPoolInfo()">
         <span id="examPoolInfo" class="info-tag"></span>
       </div>
-      <h3 style="margin-top:14px;">시험 시작</h3>
-      <div class="row">
-        <button class="btn-orange" onclick="startExam()">시험 시작 (절당 1분 30초)</button>
+      <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">빈칸 채우기 문제</h3>
+      <div class="flex gap-3.5 mb-1">
+        <label class="flex items-center gap-1 font-medium text-[13px] sm:text-sm text-slate-700"><input type="radio" name="examBlankToggle" value="on" checked onchange="setExamBlankEnabled(true)"> 사용</label>
+        <label class="flex items-center gap-1 font-medium text-[13px] sm:text-sm text-slate-700"><input type="radio" name="examBlankToggle" value="off" onchange="setExamBlankEnabled(false)"> 사용 안 함</label>
+      </div>
+      <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mt-3.5 mb-3">시험 시작</h3>
+      <div class="flex items-center flex-wrap gap-2.5">
+        <button class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="startExam()">시험 시작 (절당 1분 30초)</button>
       </div>
     </div>
   </div>
 
   <!-- ── Original text preview ── -->
-  <div class="panel" id="previewPanel">
-    <div class="verse-ref" id="verseRef">계시록 1장</div>
-    <div class="row radio-group">
-      <label><input type="radio" name="previewToggle" value="hide" checked onchange="setPreviewVisible(false)"> 원문 숨김</label>
-      <label><input type="radio" name="previewToggle" value="show" onchange="setPreviewVisible(true)"> 원문 보기</label>
+  <div class="bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="previewPanel">
+    <div class="text-xs text-slate-400 mb-2" id="verseRef">계시록 1장</div>
+    <div class="flex gap-3.5 mb-2.5">
+      <label class="flex items-center gap-1 font-medium text-sm text-slate-700"><input type="radio" name="previewToggle" value="hide" checked onchange="setPreviewVisible(false)"> 원문 숨김</label>
+      <label class="flex items-center gap-1 font-medium text-sm text-slate-700"><input type="radio" name="previewToggle" value="show" onchange="setPreviewVisible(true)"> 원문 보기</label>
     </div>
-    <div class="verse-text hidden" id="verseText"></div>
+    <div class="hidden text-base leading-[1.9] text-slate-900 whitespace-pre-line" id="verseText"></div>
   </div>
 
   <!-- ── 빈칸 연습 (practice: one verse per screen, check anytime, retry freely) ── -->
-  <div class="panel hidden" id="practicePanel">
+  <div class="hidden bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="practicePanel">
     <div class="exam-item-head">
-      <h3>빈칸 연습 <span id="practiceProgress" class="progress-tag"></span></h3>
-      <button class="nav-toggle-btn" onclick="openNavigator()">☰ 목차</button>
+      <h3 class="text-base font-bold text-slate-900">빈칸 연습 <span id="practiceProgress" class="progress-tag"></span></h3>
+      <button class="bg-white text-blue-600 border border-blue-600 rounded-md px-3 py-1.5 text-[13px] font-bold" onclick="openNavigator()">☰ 목차</button>
     </div>
     <div class="quiz-text" id="practiceText"></div>
-    <div class="row">
-      <button class="btn-green"   onclick="checkPractice()">정답 확인</button>
-      <button class="btn-outline" onclick="showPracticeHints()">첫 글자 힌트</button>
-      <button class="btn-blue"    onclick="nextPracticeItem()">다음으로</button>
-      <button class="btn-grey"    onclick="backToSelection()">다시 선택</button>
+    <div class="flex items-center flex-wrap gap-2.5">
+      <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="checkPractice()">정답 확인</button>
+      <button class="bg-white hover:bg-slate-50 text-blue-600 border border-blue-600 px-4 py-[6px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="showPracticeHints()">첫 글자 힌트</button>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="nextPracticeItem()">다음으로</button>
+      <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-[7px] rounded-md text-[13px] sm:text-sm font-semibold transition-colors" onclick="backToSelection()">다시 선택</button>
     </div>
-    <div class="row hidden" id="practiceScoreRow">
+    <div class="hidden flex items-center flex-wrap gap-2.5 mt-3" id="practiceScoreRow">
       <span id="practiceScore"></span>
     </div>
   </div>
 
   <!-- ── 시험 보기 (exam: a random sample of verses from the selected range, each with its own 1:30 timer) ── -->
-  <div class="panel hidden" id="examPanel">
+  <div class="hidden bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="examPanel">
     <div class="exam-item-head">
-      <h3>시험 보기</h3>
-      <button class="nav-toggle-btn" onclick="openNavigator()">☰ 목차</button>
+      <h3 class="text-base font-bold text-slate-900">시험 보기</h3>
+      <button class="bg-white text-blue-600 border border-blue-600 rounded-md px-3 py-1.5 text-[13px] font-bold" onclick="openNavigator()">☰ 목차</button>
     </div>
     <div class="exam-global-timer" id="examGlobalTimer"></div>
     <div id="examList"></div>
-    <div class="row" id="examSubmitRow">
-      <button class="btn-green" onclick="submitExam()">제출하기</button>
-      <button class="btn-grey"  onclick="backToSelection()">다시 선택</button>
+    <div class="flex items-center flex-wrap gap-2.5" id="examSubmitRow">
+      <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="submitExam()">제출하기</button>
+      <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="backToSelection()">다시 선택</button>
     </div>
     <div class="hidden" id="examResultRow">
-      <div class="result-card" id="resultCard">
-        <div class="result-card-label">시험 결과</div>
-        <div class="result-card-score" id="rScore">0 / 0</div>
-        <div class="result-card-pct" id="rAccuracy">0%</div>
-        <div class="result-card-range" id="rRange"></div>
-        <div class="result-card-date" id="rDate"></div>
+      <div class="aspect-[9/16] w-full max-w-[300px] mx-auto bg-slate-900 rounded-lg flex flex-col items-center justify-center gap-2.5 text-white p-6" id="resultCard">
+        <div class="text-[13px] uppercase tracking-wider opacity-80">시험 결과</div>
+        <div class="text-[42px] font-extrabold" id="rScore">0 / 0</div>
+        <div class="text-xl opacity-90" id="rAccuracy">0%</div>
+        <div class="text-[13px] opacity-85 text-center leading-relaxed whitespace-pre-line mt-2.5" id="rRange"></div>
+        <div class="text-[13px] opacity-75 mt-3" id="rDate"></div>
       </div>
-      <div class="row" style="margin-top:14px; justify-content:center;">
-        <button class="btn-blue" onclick="captureResult()">스크린샷 저장</button>
-        <button class="btn-grey" onclick="backToSelection()">새 시험</button>
+      <div class="flex items-center justify-center gap-2.5 mt-3.5">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="captureResult()">스크린샷 저장</button>
+        <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="backToSelection()">새 시험</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ── Navigator drawer: jump list shared by practice & exam ── -->
-<div class="navigator-backdrop" id="navigatorBackdrop" onclick="closeNavigator()"></div>
-<div class="navigator-panel" id="navigatorPanel">
-  <div class="navigator-header">
-    <h3>목차</h3>
-    <button class="navigator-close" onclick="closeNavigator()">×</button>
+<div class="navigator-backdrop fixed inset-0 bg-black/35 opacity-0 pointer-events-none z-[200]" id="navigatorBackdrop" onclick="closeNavigator()"></div>
+<div class="navigator-panel fixed top-0 right-0 h-full w-[min(78vw,300px)] -translate-x-0 translate-x-full bg-white border-l border-slate-200 z-[201] flex flex-col" id="navigatorPanel">
+  <div class="flex justify-between items-center px-4 py-3.5 border-b border-slate-200 shrink-0">
+    <h3 class="text-sm text-slate-900 font-bold">목차</h3>
+    <button class="bg-transparent border-none text-xl leading-none text-slate-400 hover:text-slate-600 cursor-pointer px-1" onclick="closeNavigator()">×</button>
   </div>
-  <div class="navigator-list" id="navigatorList"></div>
+  <div class="navigator-list overflow-y-auto flex-1 py-1.5" id="navigatorList"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -901,7 +791,8 @@ let state = {
   practiceIndex: 0,
   examItems:     [],
   examTimerId:   null,
-  examDate:      null
+  examDate:      null,
+  examBlankEnabled: true
 };
 
 /* ================================================================
@@ -1472,9 +1363,18 @@ function getExamCount(poolSize) {
    total. If the verse pool can't cover the combined total, both counts
    scale down together so the ratio holds. */
 function computeExamComposition(n, poolSize) {
+  if (!state.examBlankEnabled) {
+    const total = Math.min(n, poolSize);
+    return { total, entireCount: total, partialCount: 0 };
+  }
   const total = Math.min(n + Math.round(n / 2), poolSize);
   const entireCount = Math.min(total, Math.round(total * 2 / 3));
   return { total, entireCount, partialCount: total - entireCount };
+}
+
+function setExamBlankEnabled(enabled) {
+  state.examBlankEnabled = enabled;
+  updateExamPoolInfo();
 }
 
 function pickRandomVerses(pool, count) {
@@ -1616,13 +1516,50 @@ function formatSeconds(sec) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+/* Longest-common-subsequence character alignment between the correct
+   answer and the user's input (both whitespace-stripped). Returns, for
+   every character position in `correct`, whether it was matched (in
+   order) somewhere in `user`, plus the aligned user-side position.
+   This is what lets grading check each word by content instead of by
+   a rigid running position: a single typo/omission only breaks the
+   segment(s) touching it, instead of desyncing every segment after it
+   the way a fixed-length cursor walk would. */
+function alignChars(correct, user) {
+  const n = correct.length, m = user.length;
+  const dp = Array.from({ length: n + 1 }, () => new Int16Array(m + 1));
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      dp[i][j] = correct[i - 1] === user[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  const matched = new Array(n).fill(false);
+  const userPos = new Array(n).fill(-1);
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    if (correct[i - 1] === user[j - 1]) {
+      matched[i - 1] = true;
+      userPos[i - 1] = j - 1;
+      i--; j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      i--;
+    } else {
+      j--;
+    }
+  }
+  return { matched, userPos };
+}
+
 /* Grades each item in a fixed two-step sequence: (1) match the user's
-   input against the correct answer character-by-character (whitespace
-   stripped so stray spaces don't cause false mismatches), THEN (2)
-   render the 입력:/미입력: diff note for anything wrong. 전체 암송 items
-   walk a single character cursor across all segments (space-free
-   length keeps later segments aligned despite spacing differences);
-   빈칸 채우기 items check each blank input independently. */
+   input against the correct answer (whitespace stripped so stray
+   spaces don't cause false mismatches), THEN (2) render the
+   입력:/미입력: diff note for anything wrong. 전체 암송 items align the
+   whole verse via LCS and mark each word correct only if every one of
+   its characters was found, in order, in the user's input — content
+   match, not sequential position, so one wrong word doesn't cascade
+   into marking the rest of the verse wrong; 빈칸 채우기 items check each
+   blank input independently. */
 function submitExam() {
   if (state.examTimerId) clearInterval(state.examTimerId);
   state.examTimerId = null;
@@ -1638,17 +1575,25 @@ function submitExam() {
     if (type === 'entire') {
       const ta = document.getElementById(`examTA-${key}`);
       const correctSegs = splitSegments(v.text, state.mode);
+      const correctNoSpace = correctSegs.map(seg => seg.replace(/\s+/g, '')).join('');
       const userNoSpace = ta.value.replace(/\s+/g, '');
+      const { matched, userPos } = alignChars(correctNoSpace, userNoSpace);
 
       let cursor = 0;
       correctSegs.forEach(seg => {
         const segNoSpace = seg.replace(/\s+/g, '');
-        const userSeg = userNoSpace.slice(cursor, cursor + segNoSpace.length);
-        cursor += segNoSpace.length;
-        // 1) character match
-        const ok = userSeg === segNoSpace;
+        const start = cursor, end = cursor + segNoSpace.length;
+        cursor = end;
+        // 1) content match: every char of this word found, in order, in the input
+        const ok = segNoSpace.length > 0 && matched.slice(start, end).every(Boolean);
         if (ok) totalCorrect++;
         totalSegs++;
+        // best-effort reconstruction of what the user actually typed here,
+        // for the 입력: note below
+        const positions = userPos.slice(start, end).filter(p => p >= 0);
+        const userSeg = positions.length
+          ? userNoSpace.slice(Math.min(...positions), Math.max(...positions) + 1)
+          : '';
         // 2) 입력:/미입력: diff note
         const span = document.createElement('span');
         span.className = ok ? 'diff-correct' : 'diff-wrong';
