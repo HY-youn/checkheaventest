@@ -11,8 +11,14 @@
        directly in the markup below; the rules kept here are only for elements
        the app builds/toggles at runtime via className/classList, where Tailwind
        classes can't be attached from JS without touching the app logic. */
-    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+       @font-face {
+    font-family: 'GyeonggiMillenniumBackground';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2410-3@1.0/Batang_Regular.woff') format('woff');
+    font-weight: 400;
+    font-display: swap;
+}
 
+    body { font-family: 'GyeonggiMillenniumBackground', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
     button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
       outline: 2px solid #2563eb; outline-offset: 2px;
     }
@@ -103,7 +109,11 @@
     <p class="text-sm sm:text-base font-semibold text-blue-600 mb-4">계시록 빈칸 암기 테스트</p>
     <div class="inline-flex items-center gap-1 bg-blue-50 text-slate-900 font-bold text-[15px] px-[18px] py-[7px] rounded-full" id="ddayHeader"></div>
     <div class="flex items-center justify-center gap-2 mt-3 text-[13px] text-slate-500 font-semibold">
-      <span>✏️ 모의고사</span>
+      <span>✏️ 모의고사 | 교회 교육부 주관 예비 시험</span>
+      <span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full" id="ddayHeader2"></span>
+    </div>
+    <div class="flex items-center justify-center gap-2 mt-3 text-[13px] text-slate-500 font-semibold">
+      <span>✏️ 모의고사 | 9월 사명자 실력 점검 시험</span>
       <span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full" id="ddayHeader1"></span>
     </div>
   </header>
@@ -126,6 +136,17 @@
     </div>
   </div>
 
+  <!-- ── 9월 사명자 점검 시험 핵심성구: one-click load of the confirmed core-verse exam range ── -->
+  <div class="bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="coreVersePanel">
+    <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mb-3.5">🔥 9월 사명자 점검 시험 핵심성구</h3>
+    <div class="flex items-center flex-wrap gap-2.5 mb-3">
+      <button class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="selectCoreVerses_9()">확정 범위 자동 선택 (5구간)</button>
+      <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-[7px] rounded-md text-sm font-semibold transition-colors" onclick="clearRanges()">선택 해제</button>
+    </div>
+    <div class="flex items-center flex-wrap gap-2.5">
+      <span class="info-tag">계 3:12~13, 계 12:10~11, 계 15:4~5, 계 18:7~8, 계 22:15~16</span>
+    </div>
+  </div>
   <!-- ── Selection (shared by both tabs) ── -->
   <div class="bg-white border border-slate-200 rounded-lg p-[14px] sm:p-5 mb-[18px]" id="selectionPanel">
     <h3 class="text-[13px] text-slate-500 font-bold uppercase tracking-wide mb-3.5">본문 선택</h3>
@@ -825,6 +846,7 @@ function init() {
   refreshPreview();
   updateDDay();
   updateDDaymini();
+  updateDDayminii();
 }
 
 /* D-day counts the days remaining until the fixed target date, computed
@@ -841,12 +863,23 @@ function updateDDay() {
 }
 
 function updateDDaymini() {
-  const target = new Date(2026, 7, 8); // month is 0-indexed: 10 = November
+  const target = new Date(2026, 8, 13); // month is 0-indexed: 10 = November
   target.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
   const eld = document.getElementById('ddayHeader1');
+  if (!eld) return;
+  eld.textContent = diffDays > 0 ? `D-${diffDays}` : diffDays === 0 ? 'D-DAY' : `D+${Math.abs(diffDays)}`;
+}
+
+function updateDDayminii() {
+  const target = new Date(2026, 7, 23); // month is 0-indexed: 10 = November
+  target.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
+  const eld = document.getElementById('ddayHeader2');
   if (!eld) return;
   eld.textContent = diffDays > 0 ? `D-${diffDays}` : diffDays === 0 ? 'D-DAY' : `D+${Math.abs(diffDays)}`;
 }
@@ -980,9 +1013,19 @@ const CORE_VERSE_RANGES = [
   [12, 5, 5], [12, 9, 9], [12, 10, 11],
   [13, 1, 2], [13, 6, 6], [13, 17, 18],
 ];
-
+const CORE_VERSE_RANGES_9 = [
+  [3, 12, 13], [12, 10, 11], [15, 4, 5], [18, 7, 8], [22, 15, 16]
+];
 function selectCoreVerses() {
   state.ranges = CORE_VERSE_RANGES.map(([ch, from, to]) => ({
+    chapterFrom: ch, chapterTo: ch, paragraphFrom: from, paragraphTo: to
+  }));
+  renderRangeList();
+  refreshPreview();
+}
+
+function selectCoreVerses_9() {
+  state.ranges = CORE_VERSE_RANGES_9.map(([ch, from, to]) => ({
     chapterFrom: ch, chapterTo: ch, paragraphFrom: from, paragraphTo: to
   }));
   renderRangeList();
