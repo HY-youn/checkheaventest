@@ -297,6 +297,16 @@
   <div class="navigator-list overflow-y-auto flex-1 py-1.5" id="navigatorList"></div>
 </div>
 
+<!-- ── 연상 메모장: floating panel listing every saved memo (hidden during 시험 보기) ── -->
+<button id="memoFab" class="hidden fixed right-4 bottom-4 z-[190] bg-slate-900 hover:bg-slate-700 text-white rounded-full px-4 py-2.5 text-[13px] font-bold shadow-lg" onclick="toggleMemoPanel()">💡 메모장</button>
+<div id="memoPanel" class="hidden fixed right-4 bottom-16 z-[190] w-[min(calc(100vw-32px),360px)] max-h-[60vh] bg-white border border-slate-200 rounded-lg shadow-lg flex flex-col">
+  <div class="flex justify-between items-center px-4 py-3 border-b border-slate-200 shrink-0">
+    <h3 class="text-sm text-slate-900 font-bold">연상 메모장 <span id="memoPanelCount" class="progress-tag"></span></h3>
+    <button class="bg-transparent border-none text-xl leading-none text-slate-400 hover:text-slate-600 cursor-pointer px-1" onclick="toggleMemoPanel()">×</button>
+  </div>
+  <div class="overflow-y-auto flex-1" id="memoPanelList"></div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -1188,6 +1198,7 @@ function backToSelection() {
   if (state.examTimerId) clearInterval(state.examTimerId);
   state.examTimerId = null;
   updateExamPoolInfo();
+  updateMemoFab();
 }
 
 /* ================================================================
@@ -1548,6 +1559,7 @@ function startExam() {
   document.getElementById('examResultRow').classList.add('hidden');
   document.getElementById('examSubmitRow').classList.remove('hidden');
   document.getElementById('examPanel').classList.remove('hidden');
+  updateMemoFab();
 
   startGlobalExamTimer(state.examItems.length * EXAM_SECONDS_PER_VERSE);
 }
@@ -1781,6 +1793,8 @@ async function connectSupabase() {
     }
     await loadMemos();
     memoReady = true;
+    renderMemoPanel();
+    updateMemoFab();
   } catch (e) {
     console.warn('Supabase memos unavailable:', e);
   }
@@ -1889,6 +1903,7 @@ async function saveCurrentMemo() {
   memoByVerse.set(verseId, data);
   renderMemoBox('view');
   updateMemoButton();
+  renderMemoPanel();
 }
 
 async function deleteCurrentMemo() {
@@ -1902,6 +1917,49 @@ async function deleteCurrentMemo() {
   memoByVerse.delete(verseId);
   document.getElementById('memoBox').classList.add('hidden');
   updateMemoButton();
+  renderMemoPanel();
+}
+
+/* ── 연상 메모장 (floating panel): every saved memo in 장:절 order ── */
+function updateMemoFab() {
+  const inExam = !document.getElementById('examPanel').classList.contains('hidden');
+  const show = memoReady && !inExam;
+  document.getElementById('memoFab').classList.toggle('hidden', !show);
+  if (!show) document.getElementById('memoPanel').classList.add('hidden');
+}
+
+function toggleMemoPanel() {
+  document.getElementById('memoPanel').classList.toggle('hidden');
+}
+
+function renderMemoPanel() {
+  const listEl = document.getElementById('memoPanelList');
+  listEl.innerHTML = '';
+  const memos = Array.from(memoByVerse.values()).sort((a, b) => {
+    const [ac, av] = a.verse_id.split(':').map(Number);
+    const [bc, bv] = b.verse_id.split(':').map(Number);
+    return ac - bc || av - bv;
+  });
+  document.getElementById('memoPanelCount').textContent = `(${memos.length})`;
+
+  if (memos.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'navigator-empty';
+    empty.textContent = '저장된 메모가 없습니다. 빈칸 연습 중 📝 메모 작성으로 추가하세요.';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  memos.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'px-4 py-2.5 border-b border-slate-100 text-sm leading-relaxed text-slate-900 whitespace-pre-line';
+    const ref = document.createElement('span');
+    ref.className = 'verse-num';
+    ref.textContent = `${m.verse_id}  `;
+    item.appendChild(ref);
+    item.appendChild(document.createTextNode(m.body));
+    listEl.appendChild(item);
+  });
 }
 
 /* ================================================================
